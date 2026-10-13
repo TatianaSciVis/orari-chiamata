@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="it"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Orario per la chiamata: Italia ↔ Vancouver</title>
+<style>
+:root{--bg:#f6f6f3;--card:#fff;--tx:#1b1b1b;--mu:#6a6a66;--ac:#2f6fed;--acx:#fff;--bd:#e0e0da;--soft:#e9f0ff;--ok:#1f8a4c;--okbg:#e2f4e8;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#131313;--card:#1e1e1e;--tx:#f0f0ec;--mu:#9d9d98;--ac:#7aa5ff;--acx:#101010;--bd:#363636;--soft:#1f2b45;--ok:#4cc27f;--okbg:#17301f}}
+:root[data-theme="dark"]{--bg:#131313;--card:#1e1e1e;--tx:#f0f0ec;--mu:#9d9d98;--ac:#7aa5ff;--acx:#101010;--bd:#363636;--soft:#1f2b45;--ok:#4cc27f;--okbg:#17301f}
+*{box-sizing:border-box}
+body{margin:0 auto;background:var(--bg);color:var(--tx);font:16px/1.35 -apple-system,system-ui,"Segoe UI",Roboto,sans-serif;padding:12px 12px 90px;max-width:560px}
+h1{font-size:19px;margin:6px 0 8px}
+.seg{display:flex;gap:6px;margin:8px 0}
+.seg button,.btn{flex:1;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:12px;padding:10px 8px;font:inherit;font-size:15px}
+.seg button.on,.pri{background:var(--ac);color:var(--acx);border-color:var(--ac);font-weight:600}
+.lbl{font-size:13px;color:var(--mu);margin:10px 0 4px}
+.wk{display:flex;align-items:center;justify-content:space-between;margin:10px 0 6px}
+.wk button{width:44px;height:40px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;font-size:20px}
+.wk button:disabled{opacity:.3}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.day{border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;padding:6px 0;font:inherit;font-size:13px;text-align:center;position:relative}
+.day b{display:block;font-size:17px}
+.day.on{background:var(--ac);color:var(--acx);border-color:var(--ac)}
+.day:disabled{opacity:.3}
+.day i{position:absolute;top:-6px;right:-3px;background:var(--ok);color:#fff;border-radius:9px;font-style:normal;font-size:11px;min-width:18px;padding:1px 4px}
+.slot{display:block;width:100%;text-align:left;border:1.5px solid var(--bd);background:var(--card);color:var(--tx);border-radius:12px;padding:9px 12px;margin:7px 0;font:inherit;font-size:14.5px}
+.slot b{font-size:12px;color:var(--mu);font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+.t{font-size:17px;font-weight:600;margin-bottom:4px}.t2{font-size:15px}
+.tag{float:right;font-size:12px;font-weight:700;color:var(--ac)}
+.pr{border-color:var(--ac);background:var(--soft)}
+.bk{border-color:var(--ok)!important;background:var(--okbg)!important}.bk .tag{color:var(--ok)}
+.slot:disabled,.chip:disabled{opacity:.35}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.chip{border:1.5px solid var(--bd);background:var(--card);color:var(--tx);border-radius:9px;padding:5px 3px;font:inherit;font-size:11px;line-height:1.35;text-align:center}
+.chip span{display:block;white-space:nowrap}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--bd);padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center}
+.go{background:var(--ac);color:var(--acx);border:0;border-radius:12px;padding:12px 16px;font:inherit;font-weight:600;width:100%;max-width:536px}
+.go:disabled{opacity:.4}
+textarea{width:100%;border:1px solid var(--bd);border-radius:12px;background:var(--card);color:var(--tx);padding:10px;font:13px monospace;min-height:90px}
+.box{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin:10px 0}
+.row{display:flex;gap:8px;margin:8px 0}
+a.btn{text-decoration:none;text-align:center;display:block}
+small{color:var(--mu)}
+.wh{font-weight:700;margin:14px 0 4px}
+</style></head><body>
+<h1>📞 Orario per la chiamata</h1>
+<div id="app"></div>
+<script>
+const TZ={it:'Europe/Rome',van:'America/Vancouver'};
+const NAME={it:'Orario italiano',van:'Orario Vancouver'};
+const WHO={it:'Italia',van:'Vancouver'};
+const GG=['dom','lun','mar','mer','gio','ven','sab'],MM=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'];
+const oth=r=>r==='it'?'van':'it';
+const parts=(ms,tz)=>{const p={};new Intl.DateTimeFormat('en-US',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'numeric',day:'numeric',hour:'numeric',minute:'numeric'}).formatToParts(ms).forEach(x=>p[x.type]=x.value);return p};
+const off=(ms,tz)=>{const p=parts(ms,tz);return Date.UTC(+p.year,p.month-1,+p.day,+p.hour%24,+p.minute)-Math.floor(ms/6e4)*6e4};
+const toUtc=(y,m,d,h,tz)=>{const g=Date.UTC(y,m,d,h);const r=g-off(g,tz);return g-off(r,tz)};
+const dnOf=(ms,tz)=>{const p=parts(ms,tz);return Date.UTC(+p.year,p.month-1,+p.day)/864e5};
+const pad=n=>String(n).padStart(2,'0');
+const t24=(ms,tz)=>{const p=parts(ms,tz);return pad(+p.hour%24)+':'+pad(p.minute)};
+const t12=(ms,tz)=>{const p=parts(ms,tz),h=+p.hour%24;return (h%12||12)+':'+pad(p.minute)+' '+(h<12?'AM':'PM')};
+const dd=dn=>new Date(dn*864e5);
+const dlab=dn=>{const d=dd(dn);return GG[d.getUTCDay()]+' '+d.getUTCDate()+' '+MM[d.getUTCMonth()]};
+const monOf=dn=>dn-((dd(dn).getUTCDay()+6)%7);
+const wlab=m=>{const a=dd(m),b=dd(m+6);return a.getUTCDate()+(a.getUTCMonth()!==b.getUTCMonth()?' '+MM[a.getUTCMonth()]:'')+' – '+b.getUTCDate()+' '+MM[b.getUTCMonth()]};
+const guess=()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone.startsWith('Europe')?'it':'van'}catch(e){return 'van'}};
+
+let S={role:guess(),act:'prop',view:'day',p:new Set(),b:new Map(),code:'',imp:false,msg:''};
+const todayDn=()=>dnOf(Date.now(),TZ[S.role]);
+S.week=monOf(todayDn());S.day=todayDn();
+
+const cls=i=>(S.b.has(i)?' bk':S.p.has(i)?' pr':'');
+const tagOf=i=>{const o=S.b.get(i);return o?`Prenotato da ${WHO[o]}${o===S.role?' (tu)':''}`:S.p.has(i)?'Proposto':''};
+function slotHtml(ms,i){
+  const a=S.role,b=oth(a),diff=dnOf(ms,TZ[b])-dnOf(ms,TZ[a]);
+  const extra=diff?` <small>(${diff>0?'giorno dopo':'giorno prima'})</small>`:'';
+  const show=r=>`<b>${NAME[r]}</b><div class="${r===a?'t':'t2'}">${t24(ms,TZ[r])} · ${t12(ms,TZ[r])}${r===b?extra:''}</div>`;
+  return `<button class="slot${cls(i)}" data-a="tap" data-v="${i}" ${ms<Date.now()?'disabled':''}><span class="tag">${tagOf(i)}</span>${show(a)}${show(b)}</button>`;
+}
+function chipHtml(ms,i){
+  const a=S.role,b=oth(a),diff=dnOf(ms,TZ[b])-dnOf(ms,TZ[a]);
+  const f=(r)=>(r==='it'?'🇮🇹 ':'🇨🇦 ')+t24(ms,TZ[r])+' · '+t12(ms,TZ[r]).replace(' ','');
+  return `<button class="chip${cls(i)}" data-a="tap" data-v="${i}" ${ms<Date.now()?'disabled':''}><span>${f(a)}</span><span>${f(b)}${diff?(diff>0?' ⁺¹':' ⁻¹'):''}</span></button>`;
+}
+const lineFor=(i)=>{const ms=i*36e5,o=S.b.get(i);return `• ${dlab(dnOf(ms,TZ.it))}: ${NAME.it} ${t24(ms,TZ.it)} (${t12(ms,TZ.it)}) / ${NAME.van} ${t24(ms,TZ.van)} (${t12(ms,TZ.van)})`+(dnOf(ms,TZ.it)!==dnOf(ms,TZ.van)?` – a Vancouver è ${dlab(dnOf(ms,TZ.van))}`:'')+(o?` ✅ prenotato da ${WHO[o]}`:'')};
+const sorted=s=>[...s].sort((x,y)=>x-y);
+function makeMsg(){
+  const bk=sorted(S.b.keys()),pr=sorted(S.p).filter(i=>!S.b.has(i));
+  const code='CHIAMATA2-'+sorted(S.p).map(n=>n.toString(36)).join('.')+'~'+bk.map(i=>i.toString(36)+':'+(S.b.get(i)==='it'?'i':'v')).join('.');
+  return `Aggiornamento orari chiamata\n`+(pr.length?`\nProposti:\n${pr.map(lineFor).join('\n')}\n`:'')+(bk.length?`\nPrenotati:\n${bk.map(lineFor).join('\n')}\n`:'')+`\nPer vedere e aggiornare gli orari: copia TUTTO questo messaggio, apri il link in fondo, tocca "Ho ricevuto un messaggio" e poi "Incolla".\n\nCodice (non modificarlo):\n${code}`+(S.url?`\n${S.url}`:'');
+}
+function shareBox(msg){
+  return `<div class="box"><textarea id="msg" readonly>${msg}</textarea><div class="row"><button class="btn" data-a="copy">Copia</button>${navigator.share?'<button class="btn" data-a="share">Condividi…</button>':''}<a class="btn pri" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(msg)}">WhatsApp</a></div></div>`;
+}
+function render(){
+  const r=S.role,tz=TZ[r],td=todayDn(),W=S.week;
+  const seg=(a,v,l,cur)=>`<button data-a="${a}" data-v="${v}" class="${cur===v?'on':''}">${l}</button>`;
+  let h=`<div class="seg">${seg('role','it','🇮🇹 Sono in Italia',r)}${seg('role','van','🇨🇦 Sono a Vancouver',r)}</div>
+  <div class="seg">${seg('act','prop','Proponi orari',S.act)}${seg('act','book','Prenota',S.act)}</div>
+  <div class="seg">${seg('view','day','Giorno',S.view)}${seg('view','week','Settimana intera',S.view)}</div>
+  <div class="row"><button class="btn" data-a="imp">📥 Ho ricevuto un messaggio</button></div>`;
+  if(S.imp)h+=`<div class="box"><div class="row"><button class="btn pri" data-a="paste" style="padding:16px;font-size:17px">📋 Incolla il messaggio ricevuto</button></div><small>Prima copia il messaggio (tienilo premuto, poi “Copia”). Se non funziona, incollalo qui sotto:</small><textarea id="in" placeholder="Incolla qui il messaggio"></textarea><div class="row"><button class="btn" data-a="read">Importa</button></div></div>`;
+  if(S.msg)h+=`<small>${S.msg}</small>`;
+  h+=`<div class="wk"><button data-a="wk" data-v="-7" ${W+6<td?'disabled':''}>‹</button><b>Settimana ${wlab(W)}</b><button data-a="wk" data-v="7">›</button></div>`;
+  h+=`<div class="lbl">${S.act==='prop'?'Tocca gli orari in cui sei libero/a: l’altra persona li vedrà come “Proposto”.':'Tocca un orario per prenotarlo (di nuovo per annullare). In verde le prenotazioni.'} Gli orari sono mostrati nel tuo fuso (${NAME[r].toLowerCase()}) e nell’altro.</div>`;
+  const dayMs=(dn,hr)=>{const D=dd(dn);return toUtc(D.getUTCFullYear(),D.getUTCMonth(),D.getUTCDate(),hr,tz)};
+  if(S.view==='day'){
+    const cnt={};[...S.p].forEach(i=>{const k=dnOf(i*36e5,tz);cnt[k]=(cnt[k]||0)+1});
+    h+=`<div class="days">`;
+    for(let i=0;i<7;i++){const d=W+i;h+=`<button class="day${d===S.day?' on':''}" data-a="day" data-v="${d}" ${d<td?'disabled':''}>${GG[dd(d).getUTCDay()]}<b>${dd(d).getUTCDate()}</b>${cnt[d]?`<i>${cnt[d]}</i>`:''}</button>`}
+    h+=`</div><div class="wh">${dlab(S.day)}</div>`;
+    for(let hr=0;hr<24;hr++){const ms=dayMs(S.day,hr);h+=slotHtml(ms,Math.round(ms/36e5))}
+  }else{
+    h+=`<small>🇮🇹 = orario italiano · 🇨🇦 = orario Vancouver · 24h · 12h · ⁺¹/⁻¹ = giorno dopo/prima</small>`;
+    for(let i=0;i<7;i++){const d=W+i;h+=`<div class="wh">${dlab(d)}</div><div class="grid">`;
+      for(let hr=0;hr<24;hr++){const ms=dayMs(d,hr);h+=chipHtml(ms,Math.round(ms/36e5))}
+      h+=`</div>`}
+  }
+  if(S.code)h+=`<div class="wh">Pronto! Invia questo all’altra persona</div>`+shareBox(S.code);
+  const n=S.p.size+S.b.size;
+  h+=`<div class="bar"><button class="go" data-a="mk" ${n?'':'disabled'}>${n?`Invia all’altra persona (${S.p.size} proposti · ${S.b.size} prenotati)`:'Scegli almeno un orario'}</button></div>`;
+  const sy=window.scrollY;document.getElementById('app').innerHTML=h;window.scrollTo(0,sy);
+}
+document.addEventListener('click',async e=>{
+  const el=e.target.closest('[data-a]');if(!el)return;
+  let a=el.dataset.a;const v=el.dataset.v;
+  if(a==='paste'){try{document.getElementById('in').value=await navigator.clipboard.readText()}catch(_){S.msg='Tieni premuto nel riquadro qui sotto e scegli “Incolla”, poi tocca Importa.';render();return}a='read'}
+  if(a==='role'){S.role=v;S.week=monOf(todayDn());S.day=todayDn()}
+  else if(a==='act'){S.act=v}
+  else if(a==='view'){S.view=v}
+  else if(a==='imp'){S.imp=!S.imp}
+  else if(a==='wk'){S.week+=+v;S.day=Math.max(S.week,todayDn())}
+  else if(a==='day'){S.day=+v}
+  else if(a==='tap'){const i=+v,o=S.b.get(i);S.code='';
+    if(o&&o!==S.role){S.msg='Questo orario è già stato prenotato da '+WHO[o]+'.'}
+    else{S.msg='';
+      if(S.act==='prop'){if(o){S.msg='Orario già prenotato: annullalo prima da “Prenota”.'}else S.p.has(i)?S.p.delete(i):S.p.add(i)}
+      else{if(o)S.b.delete(i);else{S.b.set(i,S.role);S.p.add(i)}}}}
+  else if(a==='mk'){S.code=makeMsg();try{S.url=location.href}catch(_){S.url=''};S.code=makeMsg()}
+  else if(a==='read'){
+    const raw=(document.getElementById('in').value||'');const k=raw.lastIndexOf('CHIAMATA2-');
+    if(k<0){S.msg='Codice non valido: incolla il messaggio per intero.'}
+    else{const t=raw.slice(k+10).split(/\s/)[0].split('~');let np=0,nb=0;
+      const ok=n=>isFinite(n)&&n>400000&&n<900000;
+      (t[0]||'').split('.').filter(Boolean).map(x=>parseInt(x,36)).filter(ok).forEach(n=>{if(!S.p.has(n)){S.p.add(n);np++}});
+      (t[1]||'').split('.').filter(Boolean).forEach(x=>{const [n,w]=x.split(':'),i=parseInt(n,36);if(ok(i)&&!S.b.has(i)){S.b.set(i,w==='i'?'it':'van');S.p.add(i);nb++}});
+      S.msg=`Importati ${np} nuovi orari proposti e ${nb} nuove prenotazioni.`;S.imp=false;S.code=''}}
+  else if(a==='copy'||a==='share'){
+    const t=document.getElementById('msg');
+    try{if(a==='share')await navigator.share({text:t.value});else await navigator.clipboard.writeText(t.value);el.textContent='Fatto ✓';return}catch(_){t.select();try{document.execCommand('copy');el.textContent='Copiato ✓'}catch(__){}return}
+  }
+  render();
+});
+render();
+</script></body></html>
